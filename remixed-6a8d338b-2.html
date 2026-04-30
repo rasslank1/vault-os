@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAULT//OS — Goal Finance Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #020408;
+  --bg2:      #060d14;
+  --panel:    #080f1a;
+  --border:   rgba(0,245,255,0.15);
+  --cyan:     #00f5ff;
+  --cyan-dim: rgba(0,245,255,0.25);
+  --magenta:  #ff00aa;
+  --mag-dim:  rgba(255,0,170,0.2);
+  --green:    #00ff88;
+  --grn-dim:  rgba(0,255,136,0.15);
+  --yellow:   #ffd000;
+  --yel-dim:  rgba(255,208,0,0.15);
+  --red:      #ff3c5a;
+  --text:     #8db0cc;
+  --text-dim: #2e4a62;
+  --font-mono: 'Share Tech Mono', monospace;
+  --font-ui:   'Rajdhani', sans-serif;
+  --font-hd:   'Orbitron', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-ui);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;cursor:crosshair}
+
+/* Scanlines */
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.14) 2px,rgba(0,0,0,0.14) 4px);pointer-events:none;z-index:9999}
+
+/* Grid bg */
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.025) 1px,transparent 1px);background-size:56px 56px;pointer-events:none;z-index:0}
+
+/* ─── NAV ─── */
+nav{position:sticky;top:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;background:rgba(2,4,8,0.97);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+nav::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,var(--cyan) 30%,var(--magenta) 70%,transparent 100%);opacity:0.5}
+.logo{font-family:var(--font-hd);font-size:1rem;font-weight:900;letter-spacing:5px;color:var(--cyan);text-shadow:0 0 20px var(--cyan),0 0 40px rgba(0,245,255,0.3);text-decoration:none}
+.logo span{color:var(--magenta);text-shadow:0 0 20px var(--magenta)}
+.nav-links{display:flex;gap:2px}
+.nav-links a{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);text-decoration:none;padding:6px 14px;border:1px solid transparent;transition:all 0.2s}
+.nav-links a:hover,.nav-links a.active{color:var(--cyan);border-color:var(--cyan-dim);text-shadow:0 0 10px var(--cyan);background:rgba(0,245,255,0.04)}
+.nav-links a.active::before{content:'▶ ';font-size:0.55rem}
+
+/* ─── STATUS BAR ─── */
+.status-bar{background:rgba(6,13,20,0.9);border-bottom:1px solid var(--border);padding:5px 28px;display:flex;gap:24px;align-items:center;font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);position:relative;z-index:1;overflow:hidden}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pdot 2s infinite;flex-shrink:0}
+.s-dot.w{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+.s-item{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.ticker-wrap{margin-left:auto;overflow:hidden;max-width:460px;white-space:nowrap}
+.ticker-inner{display:inline-block;animation:tick 28s linear infinite}
+
+/* ─── HERO ─── */
+.hero{position:relative;z-index:1;padding:56px 28px 32px;max-width:1280px;margin:0 auto}
+.eyebrow{font-family:var(--font-mono);font-size:0.68rem;letter-spacing:4px;color:var(--magenta);text-shadow:0 0 12px var(--magenta);margin-bottom:10px;animation:flicker 5s infinite}
+.hero h1{font-family:var(--font-hd);font-size:clamp(2rem,5vw,3.8rem);font-weight:900;line-height:1;letter-spacing:3px;color:#fff;text-shadow:0 0 40px rgba(0,245,255,0.2);margin-bottom:8px;animation:glitch 9s infinite}
+.hero h1 .cx{color:var(--cyan);text-shadow:0 0 30px var(--cyan)}
+.hero-sub{font-family:var(--font-mono);font-size:0.8rem;color:var(--text-dim);letter-spacing:2px}
+
+/* ─── STATS ROW ─── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:1280px;margin:0 auto;padding:0 28px 28px;position:relative;z-index:1}
+.stat-p{background:var(--panel);border:1px solid var(--border);padding:18px 20px;position:relative;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:border-color 0.3s}
+.stat-p:hover{border-color:var(--cyan-dim)}
+.stat-p::before{content:'';position:absolute;top:0;left:0;width:32px;height:1px;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.s-label{font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px}
+.s-val{font-family:var(--font-hd);font-size:1.7rem;font-weight:700;color:var(--cyan);line-height:1}
+.s-val.m{color:var(--magenta)}.s-val.g{color:var(--green)}.s-val.y{color:var(--yellow)}
+.s-delta{font-family:var(--font-mono);font-size:0.62rem;color:var(--text-dim);margin-top:5px}
+
+/* ─── WORKSPACE ─── */
+.workspace{max-width:1280px;margin:0 auto;padding:0 28px 80px;display:grid;grid-template-columns:1fr 400px;gap:16px;position:relative;z-index:1}
+
+/* ─── PANEL ─── */
+.panel{background:var(--panel);border:1px solid var(--border);position:relative}
+.panel-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(0,245,255,0.015);gap:12px;flex-wrap:wrap}
+.panel-title{font-family:var(--font-hd);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);text-shadow:0 0 10px rgba(0,245,255,0.4);display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';display:block;width:7px;height:7px;background:var(--cyan);box-shadow:0 0 10px var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)}
+
+/* ─── CHART ─── */
+.chart-controls{display:flex;gap:6px}
+.chart-btn{font-family:var(--font-mono);font-size:0.63rem;letter-spacing:1px;padding:4px 11px;background:transparent;border:1px solid var(--text-dim);color:var(--text-dim);cursor:pointer;transition:all 0.2s;text-transform:uppercase}
+.chart-btn:hover,.chart-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,255,0.06);text-shadow:0 0 8px var(--cyan)}
+.chart-wrap{padding:20px}
+.chart-area{position:relative;height:240px}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-family:var(--font-mono);font-size:0.63rem}
+.leg-item{display:flex;align-items:center;gap:6px;color:var(--text-dim)}
+.leg-line{width:14px;height:2px}
+
+/* ─── FORM ─── */
+.form-body{padding:18px}
+.f-label{font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;display:block}
+.f-field{margin-bottom:13px}
+input[type=text],input[type=number],input[type=date],select{width:100%;background:rgba(0,245,255,0.025);border:1px solid var(--text-dim);color:#fff;font-family:var(--font-mono);font-size:0.82rem;padding:9px 13px;outline:none;transition:all 0.2s;-webkit-appearance:none;color-scheme:dark}
+input:focus,select:focus{border-color:var(--cyan);background:rgba(0,245,255,0.05);box-shadow:0 0 0 1px var(--cyan-dim)}
+input::placeholder{color:var(--text-dim)}
+select option{background:#060d14}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.cat-opt{background:transparent;border:1px solid var(--text-dim);color:var(--text-dim);font-family:var(--font-mono);font-size:0.6rem;letter-spacing:1px;text-transform:uppercase;padding:7px 3px;cursor:pointer;transition:all 0.15s;text-align:center}
+.cat-opt:hover{border-color:var(--magenta);color:var(--magenta)}
+.cat-opt.sel{border-color:var(--magenta);color:var(--magenta);background:var(--mag-dim);text-shadow:0 0 8px var(--magenta)}
+.btn-exec{width:100%;background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--font-hd);font-size:0.78rem;font-weight:700;letter-spacing:4px;text-transform:uppercase;padding:13px;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;margin-top:4px;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
+.btn-exec::before{content:'';position:absolute;inset:0;background:var(--cyan);transform:scaleX(0);transform-origin:left;transition:transform 0.3s;z-index:-1}
+.btn-exec:hover{color:var(--bg);text-shadow:none;box-shadow:0 0 30px var(--cyan-dim)}
+.btn-exec:hover::before{transform:scaleX(1)}
+
+/* ─── FILTER ─── */
+.filter-row{display:flex;gap:5px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--border)}
+.f-btn{font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;padding:4px 11px;background:transparent;border:1px solid transparent;color:var(--text-dim);cursor:pointer;transition:all 0.15s}
+.f-btn:hover{color:var(--text)}
+.f-btn.active{border-color:var(--mag-dim);color:var(--magenta);background:var(--mag-dim)}
+
+/* ─── GOALS LIST ─── */
+.goals-list{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+
+/* ─── GOAL CARD ─── */
+.goal-card{background:var(--bg2);border:1px solid var(--border);position:relative;overflow:hidden;transition:border-color 0.3s,transform 0.25s;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));animation:cin 0.35s both}
+.goal-card:hover{border-color:rgba(0,245,255,0.3);transform:translateY(-2px)}
+.card-accent{height:2px;width:100%;opacity:0.45}
+.goal-card:hover .card-accent{opacity:0.9;transition:opacity 0.3s}
+.card-inner{padding:16px 18px}
+.card-top-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:12px}
+.card-cat{font-family:var(--font-mono);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.card-name{font-family:var(--font-hd);font-size:0.92rem;font-weight:700;color:#e0f0ff;letter-spacing:1px;line-height:1.2}
+.card-desc{font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);margin-top:2px}
+.card-amt{text-align:right;flex-shrink:0}
+.card-saved{font-family:var(--font-hd);font-size:1.2rem;font-weight:700;line-height:1}
+.card-tgt{font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);margin-top:2px}
+.prog-row{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.prog-track{flex:1;height:3px;background:rgba(255,255,255,0.05);position:relative}
+.prog-fill{height:100%;position:relative;transition:width 0.9s cubic-bezier(0.16,1,0.3,1)}
+.prog-fill::after{content:'';position:absolute;right:-2px;top:-4px;width:9px;height:9px;background:#fff;border-radius:50%}
+.goal-card.done .prog-fill::after{display:none}
+.prog-pct{font-family:var(--font-mono);font-size:0.68rem;min-width:34px;text-align:right}
+.card-foot{display:flex;gap:7px;align-items:center;padding-top:10px;border-top:1px solid rgba(255,255,255,0.04)}
+.btn-dep{flex:1;background:transparent;border:1px solid;font-family:var(--font-mono);font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;padding:7px 9px;cursor:pointer;transition:all 0.2s}
+.btn-dep:hover{opacity:0.8}
+.btn-dep:disabled{cursor:default;opacity:0.7}
+.btn-rm{background:transparent;border:1px solid rgba(255,60,90,0.2);color:var(--red);font-family:var(--font-mono);font-size:0.65rem;padding:7px 11px;cursor:pointer;transition:all 0.2s}
+.btn-rm:hover{background:rgba(255,60,90,0.1);border-color:var(--red)}
+.card-badge{font-family:var(--font-mono);font-size:0.58rem;color:var(--text-dim);margin-left:auto;white-space:nowrap}
+
+/* ─── EMPTY ─── */
+.empty-st{grid-column:1/-1;text-align:center;padding:56px 24px;font-family:var(--font-mono);color:var(--text-dim)}
+.empty-st .asc{font-size:0.75rem;line-height:1.5;margin-bottom:14px}
+.empty-st p{letter-spacing:2px;font-size:0.75rem}
+
+/* ─── MODAL ─── */
+.overlay{position:fixed;inset:0;background:rgba(2,4,8,0.88);backdrop-filter:blur(6px);z-index:800;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--panel);border:1px solid var(--cyan-dim);width:400px;max-width:92vw;box-shadow:0 0 60px rgba(0,245,255,0.1);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));transform:scale(0.93);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1)}
+.overlay.open .modal{transform:scale(1)}
+.modal-hd{padding:18px 22px 14px;border-bottom:1px solid var(--border)}
+.modal-hd h3{font-family:var(--font-hd);font-size:0.78rem;letter-spacing:3px;color:var(--cyan);text-shadow:0 0 12px rgba(0,245,255,0.4)}
+.modal-body{padding:18px 22px}
+.m-gname{font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim);margin-bottom:14px}
+.modal-actions{display:flex;gap:9px;margin-top:16px}
+.btn-ok{flex:1;background:transparent;border:1px solid var(--green);color:var(--green);font-family:var(--font-hd);font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;padding:11px;cursor:pointer;transition:all 0.2s;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.btn-ok:hover{background:var(--grn-dim);box-shadow:0 0 20px rgba(0,255,136,0.2)}
+.btn-no{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-mono);font-size:0.7rem;padding:11px 16px;cursor:pointer;transition:all 0.2s}
+.btn-no:hover{border-color:var(--red);color:var(--red)}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--cyan);color:var(--cyan);font-family:var(--font-mono);font-size:0.7rem;letter-spacing:1px;padding:11px 18px;z-index:999;box-shadow:0 0 28px var(--cyan-dim);transform:translateY(70px);opacity:0;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-color:var(--red);color:var(--red);box-shadow:0 0 28px rgba(255,60,90,0.15)}
+.toast.ok{border-color:var(--green);color:var(--green);box-shadow:0 0 28px rgba(0,255,136,0.1)}
+
+/* ─── KEYFRAMES ─── */
+@keyframes nameGlow{0%,100%{text-shadow:0 0 6px var(--cyan),0 0 20px rgba(0,245,255,0.4);color:var(--cyan)}50%{text-shadow:0 0 12px var(--magenta),0 0 30px rgba(255,0,170,0.6),0 0 60px rgba(255,0,170,0.2);color:var(--magenta)}}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:0.25}}
+@keyframes flicker{0%,92%,100%{opacity:1}93%{opacity:0.3}94%{opacity:1}96%{opacity:0.5}97%{opacity:1}}
+@keyframes glitch{0%,91%,100%{text-shadow:0 0 40px rgba(0,245,255,0.2);transform:none}92%{text-shadow:-2px 0 var(--magenta),2px 0 var(--cyan);transform:translateX(1px)}93%{text-shadow:2px 0 var(--magenta),-2px 0 var(--cyan);transform:translateX(-1px)}94%{text-shadow:0 0 40px rgba(0,245,255,0.2);transform:none}}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes cin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:960px){.workspace{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){nav,div.hero,.stats-row,.workspace{padding-left:14px;padding-right:14px}.stats-row{grid-template-columns:1fr 1fr}.f-row{grid-template-columns:1fr}.cat-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">VAULT<span>//OS</span></a>
+  <div class="nav-links">
+    <a href="index.html" class="active">Terminal</a>
+    <button onclick="openBuildLog()" style="color:var(--magenta);border:1px solid var(--mag-dim);text-shadow:0 0 10px var(--magenta);background:transparent;font-family:var(--font-mono);font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all 0.2s">▶ BUILD LOG</button>
+  </div>
+</nav>
+
+<div class="status-bar">
+  <div class="s-item"><div class="s-dot"></div><span>SYS: ONLINE</span></div>
+  <div class="s-item"><div class="s-dot w"></div><span>SECURE</span></div>
+  <div class="s-item"><span id="clock">--:--:--</span></div>
+  <div class="ticker-wrap">
+    <span class="ticker-inner">// TIP: AUTOMATE SAVINGS ON PAYDAY &nbsp;••&nbsp; COMPOUND INTEREST IS THE 8TH WONDER &nbsp;••&nbsp; $5/DAY = $1,825/YEAR &nbsp;••&nbsp; 52-WEEK CHALLENGE = $1,378 SAVED &nbsp;••&nbsp; NEGOTIATE EVERY SUBSCRIPTION &nbsp;••&nbsp; TRACK EVERY GOAL. REACH EVERY TARGET &nbsp;••&nbsp; // TIP: AUTOMATE SAVINGS ON PAYDAY &nbsp;••&nbsp; COMPOUND INTEREST IS THE 8TH WONDER &nbsp;••&nbsp; $5/DAY = $1,825/YEAR &nbsp;••&nbsp; 52-WEEK CHALLENGE = $1,378 SAVED &nbsp;••&nbsp; NEGOTIATE EVERY SUBSCRIPTION &nbsp;••&nbsp; TRACK EVERY GOAL. REACH EVERY TARGET &nbsp;••&nbsp;</span>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="eyebrow">// VAULT//OS v2.4.1 — PERSONAL FINANCE TERMINAL</div>
+  <h1>GOAL <span class="cx">FINANCE</span><br>TRACKER</h1>
+  <div class="hero-sub">> SET TARGETS · LOG DEPOSITS · EXECUTE DREAMS</div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-p">
+    <div class="s-label">Active Goals</div>
+    <div class="s-val" id="s-active">0</div>
+    <div class="s-delta">in progress</div>
+  </div>
+  <div class="stat-p">
+    <div class="s-label">Total Saved</div>
+    <div class="s-val m" id="s-saved">$0</div>
+    <div class="s-delta" id="s-pct-delta">0% of targets</div>
+  </div>
+  <div class="stat-p">
+    <div class="s-label">Total Target</div>
+    <div class="s-val y" id="s-targets">$0</div>
+    <div class="s-delta">combined goals</div>
+  </div>
+  <div class="stat-p">
+    <div class="s-label">Completed</div>
+    <div class="s-val g" id="s-done">0</div>
+    <div class="s-delta">targets reached</div>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- Left column -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Chart panel -->
+    <div class="panel">
+      <div class="panel-hd">
+        <div class="panel-title">Savings Analytics</div>
+        <div class="chart-controls">
+          <button class="chart-btn active" onclick="setMode('progress',this)">Progress</button>
+          <button class="chart-btn" onclick="setMode('breakdown',this)">Breakdown</button>
+          <button class="chart-btn" onclick="setMode('timeline',this)">Timeline</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-area"><canvas id="chart"></canvas></div>
+        <div class="chart-legend" id="legend"></div>
+      </div>
+    </div>
+
+    <!-- Goals panel -->
+    <div class="panel">
+      <div class="panel-hd">
+        <div class="panel-title">Active Goal Matrix</div>
+      </div>
+      <div class="filter-row">
+        <button class="f-btn active" onclick="doFilter('all',this)">All</button>
+        <button class="f-btn" onclick="doFilter('collecting',this)">Collecting</button>
+        <button class="f-btn" onclick="doFilter('experiences',this)">Experiences</button>
+        <button class="f-btn" onclick="doFilter('tech',this)">Tech</button>
+        <button class="f-btn" onclick="doFilter('lifestyle',this)">Lifestyle</button>
+        <button class="f-btn" onclick="doFilter('investment',this)">Investment</button>
+        <button class="f-btn" onclick="doFilter('other',this)">Other</button>
+      </div>
+      <div class="goals-list" id="goals-list"></div>
+    </div>
+
+  </div>
+
+  <!-- Right column: form -->
+  <div>
+    <div class="panel" style="position:sticky;top:60px">
+      <div class="panel-hd"><div class="panel-title">New Goal Protocol</div></div>
+      <div class="form-body">
+        <div class="f-field">
+          <label class="f-label">Goal Designation</label>
+          <input type="text" id="f-name" placeholder="e.g. Carbon Road Bike">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Category</label>
+          <div class="cat-grid" id="cat-grid">
+            <button class="cat-opt sel" data-cat="collecting">Collecting</button>
+            <button class="cat-opt" data-cat="experiences">Experience</button>
+            <button class="cat-opt" data-cat="tech">Tech</button>
+            <button class="cat-opt" data-cat="lifestyle">Lifestyle</button>
+            <button class="cat-opt" data-cat="investment">Invest</button>
+            <button class="cat-opt" data-cat="other">Other</button>
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="f-field">
+            <label class="f-label">Target ($)</label>
+            <input type="number" id="f-target" placeholder="1000" min="1">
+          </div>
+          <div class="f-field">
+            <label class="f-label">Current ($)</label>
+            <input type="number" id="f-saved" placeholder="0" min="0">
+          </div>
+        </div>
+        <div class="f-field">
+          <label class="f-label">Notes</label>
+          <input type="text" id="f-desc" placeholder="Why this matters...">
+        </div>
+        <div class="f-field">
+          <label class="f-label">Target Date</label>
+          <input type="date" id="f-date">
+        </div>
+        <button class="btn-exec" onclick="addGoal()">⬡ INITIALIZE GOAL</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-hd"><h3>// DEPOSIT TRANSACTION</h3></div>
+    <div class="modal-body">
+      <div class="m-gname" id="m-name">—</div>
+      <div class="f-field">
+        <label class="f-label">Amount ($)</label>
+        <input type="number" id="m-amt" placeholder="0.00" min="0.01" step="0.01">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ok" onclick="confirmDeposit()">CONFIRM TX</button>
+        <button class="btn-no" onclick="closeModal()">ABORT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer style="position:relative;z-index:1;text-align:center;padding:40px 28px 48px;border-top:1px solid var(--border);margin-top:0">
+  <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:10px">// CREATOR NOTE</div>
+  <blockquote style="font-family:var(--font-ui);font-size:1.05rem;font-style:italic;color:#c8dcec;font-weight:500;max-width:560px;margin:0 auto 12px;line-height:1.7">"To be honest I'm terrible at saving money so maybe I can save a bit now"</blockquote>
+  <div style="font-family:var(--font-mono);font-size:0.68rem;letter-spacing:3px;color:var(--cyan);animation:nameGlow 2.5s ease-in-out infinite">— Khaled Rasslan</div>
+  <div style="margin-top:18px">
+    <a href="https://www.instagram.com/khaled.razz" target="_blank" style="font-family:var(--font-mono);font-size:0.68rem;letter-spacing:2px;color:var(--text-dim);text-decoration:none;border:1px solid var(--border);padding:7px 16px;transition:all 0.2s;display:inline-block" onmouseover="this.style.color='#ff00aa';this.style.borderColor='rgba(255,0,170,0.4)';this.style.textShadow='0 0 12px #ff00aa'" onmouseout="this.style.color='';this.style.borderColor='';this.style.textShadow=''">⬡ @khaled.razz</a>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════ BUILD LOG OVERLAY ══════════ -->
+<div id="build-log-overlay" style="display:none;position:fixed;inset:0;z-index:1000;background:#020408;overflow-y:auto;animation:cin 0.3s both">
+<style>
+.bl-nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;background:rgba(2,4,8,0.97);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+.bl-nav::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--magenta) 40%,var(--cyan) 70%,transparent);opacity:0.6}
+.bl-close{font-family:var(--font-mono);font-size:0.7rem;letter-spacing:2px;background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:6px 14px;cursor:pointer;transition:all 0.2s}
+.bl-close:hover{border-color:var(--red);color:var(--red)}
+.bl-hero{padding:52px 28px 24px;max-width:900px;margin:0 auto}
+.bl-eyebrow{font-family:var(--font-mono);font-size:0.68rem;letter-spacing:4px;color:var(--magenta);animation:flicker 5s infinite;margin-bottom:8px}
+.bl-h1{font-family:var(--font-hd);font-size:clamp(1.8rem,4vw,3rem);font-weight:900;letter-spacing:3px;color:#fff;text-shadow:0 0 40px rgba(0,245,255,0.2);margin-bottom:8px;animation:glitch 9s infinite}
+.bl-h1 span{color:var(--cyan);text-shadow:0 0 24px var(--cyan)}
+.bl-sub{font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);letter-spacing:2px;line-height:1.8;max-width:640px}
+.bl-grid{max-width:900px;margin:0 auto;padding:0 28px 80px;display:grid;gap:16px}
+.prompt-card{background:var(--panel);border:1px solid var(--border);position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));animation:cin 0.4s both;transition:border-color 0.3s}
+.prompt-card:hover{border-color:rgba(0,245,255,0.25)}
+.prompt-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;opacity:0.5}
+.pc-num{position:absolute;top:14px;right:18px;font-family:var(--font-hd);font-size:2.2rem;font-weight:900;color:rgba(0,245,255,0.04);line-height:1;letter-spacing:2px;user-select:none}
+.pc-inner{padding:20px 22px}
+.pc-tag{font-family:var(--font-mono);font-size:0.62rem;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.pc-tag::after{content:'';flex:1;height:1px;background:var(--border)}
+.pc-prompt{background:rgba(0,0,0,0.35);border-left:2px solid;padding:14px 16px;margin-bottom:14px;font-family:var(--font-mono);font-size:0.78rem;color:#c8dcec;line-height:1.7;border-radius:0 2px 2px 0;position:relative}
+.pc-prompt::before{content:'> ';color:var(--text-dim)}
+.pc-sections{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pc-section{background:rgba(0,0,0,0.2);border:1px solid var(--border);padding:12px 14px}
+.pc-slabel{font-family:var(--font-mono);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.pc-stext{font-family:var(--font-ui);font-size:0.82rem;color:var(--text);line-height:1.5;font-weight:500}
+@media(max-width:600px){.pc-sections{grid-template-columns:1fr}.bl-nav,.bl-hero,.bl-grid{padding-left:14px;padding-right:14px}}
+</style>
+
+  <div class="bl-nav">
+    <a class="logo" href="#" onclick="closeBuildLog()">VAULT<span>//OS</span></a>
+    <button class="bl-close" onclick="closeBuildLog()">✕ CLOSE LOG</button>
+  </div>
+
+  <div class="bl-hero">
+    <div class="bl-eyebrow">// MISSION DEBRIEF — CLASSIFIED</div>
+    <div class="bl-h1">BUILD <span>LOG</span><br>RECORD</div>
+    <div class="bl-sub">> This page documents every prompt used to construct VAULT//OS — the goal finance tracker you're currently running. Each entry shows the exact input given to Claude, what was accomplished, and what was delivered. No prompt was written manually by the user. All pages were generated by AI.</div>
+  </div>
+
+  <div class="bl-grid" id="bl-entries"></div>
+</div>
+
+<script>
+const BUILD_PROMPTS = [
+  {
+    tag:'PROMPT 01',
+    color:'#00f5ff',
+    prompt:'I want to build a finance tracker website that looks really futuristic and cyberpunk — like a hacker terminal. It should track savings goals with a progress bar for each goal. Make it look like a sci-fi OS with glowing colors, scanlines, a monospace font, and a sticky nav bar.',
+    task:'Designed and built the initial VAULT//OS interface with a full cyberpunk aesthetic.',
+    response:'Delivered a complete single-page HTML artifact with cyan/magenta glow effects, scanline overlay, CSS grid layout, sticky nav, and a goals list panel. Included a form to add goals and Chart.js analytics.'
+  },
+  {
+    tag:'PROMPT 02',
+    color:'#ff00aa',
+    prompt:'Add a stats row at the top showing total saved, total targets, active goals, and completed goals. These should update in real time whenever I add or deposit into a goal.',
+    task:'Implemented a dynamic 4-column stats dashboard that reads from live goal data.',
+    response:'Added an animated stats row with Orbitron font numerals. Each stat auto-recalculates on every add/delete/deposit action using a central render() function.'
+  },
+  {
+    tag:'PROMPT 03',
+    color:'#ffd000',
+    prompt:'Add a savings analytics chart panel with three modes: a horizontal bar chart showing savings progress per goal, a doughnut chart showing savings by category, and a line chart simulating weekly progress over time. Add toggle buttons to switch between them.',
+    task:'Built a three-mode Chart.js panel with animated transitions between views.',
+    response:'Integrated Chart.js 4.4.1. Each mode (Progress, Breakdown, Timeline) is rendered on demand with destroy/reinit pattern. Colors are mapped per category. A legend updates dynamically beneath the chart.'
+  },
+  {
+    tag:'PROMPT 04',
+    color:'#00ff88',
+    prompt:'Make the goal cards look more like high-tech panels. Each card should show the category, goal name, a description, a glowing progress bar, remaining amount, days left to deadline, and deposit/remove buttons. If a goal is 100% complete, show a green DONE state instead.',
+    task:'Redesigned every goal card with a full data-rich layout and conditional complete state.',
+    response:'Cards now use clip-path polygon corners, per-category color accents, glowing progress fills with a dot-marker, and a footer row showing days-left and remaining amount. Completed goals disable the deposit button and show a green checkmark banner.'
+  },
+  {
+    tag:'PROMPT 05',
+    color:'#ff6b3d',
+    prompt:'Add a category filter row above the goals list. Clicking a filter should show only goals from that category. Also add a category selector in the form using button pills — not a dropdown.',
+    task:'Built a filter bar and category pill selector tied to real-time goal filtering.',
+    response:'Added seven filter buttons (All + 6 categories) that toggle an active class and re-render the goals list. The form now shows a 3-column grid of toggleable category pills that highlight in magenta when selected.'
+  },
+  {
+    tag:'PROMPT 06',
+    color:'#a855f7',
+    prompt:'When the user clicks the deposit button, open a modal overlay with an input for the amount and confirm/abort buttons. The modal should also show the current saved vs target values for that goal. Make it closeable by pressing Escape or clicking outside.',
+    task:'Implemented a deposit modal with keyboard support and backdrop click dismissal.',
+    response:'The overlay uses CSS opacity + pointer-events toggling for smooth fade. The modal window has a clip-path angular corner. Input auto-focuses on open. Escape and Enter key events are bound globally. Confirming a deposit caps saved at the target and fires a toast notification.'
+  },
+  {
+    tag:'PROMPT 07',
+    color:'#00f5ff',
+    prompt:'Add a live scrolling ticker in the status bar with finance tips. Also add a blinking system clock that shows the real current time, and two status dots showing system online and secure status.',
+    task:'Wired a live JS clock and CSS ticker animation into the status bar.',
+    response:'The clock updates every second via setInterval. The ticker uses a CSS @keyframes translateX loop on a doubled string for seamless scrolling. Two pulsing dots (green for online, yellow for secure) use a separate keyframe for their blink cycle.'
+  },
+  {
+    tag:'PROMPT 08',
+    color:'#ff00aa',
+    prompt:'Add a glitch animation on the main heading and a flicker animation on the eyebrow text. Also make the main heading do a chromatic aberration effect during the glitch where the text splits into cyan and magenta shadows briefly.',
+    task:'Animated the hero section with two CSS keyframe effects for a cinematic glitch look.',
+    response:'The @keyframes glitch rule fires at 92–94% of a 9s loop, briefly applying translateX and split text-shadow colors (cyan offset left, magenta offset right) to simulate RGB channel separation. The @keyframes flicker rule creates a fast opacity stutter on the eyebrow label.'
+  },
+  {
+    tag:'PROMPT 09',
+    color:'#ffd000',
+    prompt:'Persist all goals in localStorage so they survive a page refresh. Pre-load the app with a few sample goals so it doesn\'t look empty on first load. If localStorage is empty, seed with demo data.',
+    task:'Added localStorage persistence and demo data seeding logic.',
+    response:'Goals are saved on every mutation via a save() helper. On load, the app reads from localStorage. If null, it seeds five sample goals spanning all categories (lifestyle, experience, tech, investment, collecting) with realistic target and saved amounts.'
+  },
+  {
+    tag:'PROMPT 10',
+    color:'#00ff88',
+    prompt:'Add a BUILD LOG button to the nav bar. When clicked it should open a full-screen overlay page — styled exactly like the rest of the site — that lists every prompt used to build this project, with the task completed and the AI\'s response described under each one. Make it unique and different from any other example.',
+    task:'Built this Build Log page as a full-screen in-page overlay with matching VAULT//OS aesthetics.',
+    response:'The log is injected as a hidden overlay div that slides in on button click. Each prompt is displayed in a numbered card with clip-path corners, category-matched accent colors, a monospace prompt block, and two labeled sections for Task and Response. The overlay is closeable via the nav button.'
+  },
+  {
+    tag:'PROMPT 11',
+    color:'#a855f7',
+    prompt:'On the bottom add a quote saying "To be honest I\'m terrible at saving money so maybe I can save a bit now" and say it was by Khaled Rasslan. Remove the creator tag. Add a cool glowing effect around the name. Also add my Instagram link at the bottom of the main page.',
+    task:'Added a personal quote footer with a glowing name effect and Instagram link.',
+    response:'A styled footer was added with the quote in italic, the name "Khaled Rasslan" rendered with an animated cyan glow pulse effect, and a hoverable magenta Instagram button linking to @khaled.razz.'
+  },
+];
+
+function renderBuildLog(){
+  const el = document.getElementById('bl-entries');
+  el.innerHTML = BUILD_PROMPTS.map((p,i)=>`
+    <div class="prompt-card" style="animation-delay:${i*0.07}s">
+      <div class="prompt-card::before" style="background:${p.color}"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${p.color},transparent);opacity:0.6"></div>
+      <div class="pc-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="pc-inner">
+        <div class="pc-tag" style="color:${p.color};text-shadow:0 0 10px ${p.color}66">${p.tag}</div>
+        <div class="pc-prompt" style="border-color:${p.color};color:#d4eaf8">${p.prompt}</div>
+        <div class="pc-sections">
+          <div class="pc-section">
+            <div class="pc-slabel" style="color:${p.color}">Task Completed</div>
+            <div class="pc-stext">${p.task}</div>
+          </div>
+          <div class="pc-section">
+            <div class="pc-slabel" style="color:var(--magenta)">AI Response</div>
+            <div class="pc-stext">${p.response}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openBuildLog(){
+  renderBuildLog();
+  const ov = document.getElementById('build-log-overlay');
+  ov.style.display='block';
+  ov.scrollTop=0;
+  document.body.style.overflow='hidden';
+}
+
+function closeBuildLog(){
+  document.getElementById('build-log-overlay').style.display='none';
+  document.body.style.overflow='';
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const CAT_COLOR = {
+  collecting:'#ff00aa', experiences:'#00f5ff',
+  tech:'#ffd000', lifestyle:'#00ff88',
+  investment:'#ff6b3d', other:'#a855f7'
+};
+
+let goals = JSON.parse(localStorage.getItem('vault2-goals') || 'null');
+let curFilter = 'all', depositId = null, chartMode = 'progress', myChart = null;
+
+if (!goals) {
+  goals = [
+    {id:uid(),name:'Carbon Road Bike',category:'lifestyle',target:2400,saved:860,desc:'Shimano Ultegra build',date:'2025-09-01',created:Date.now()-45*864e5},
+    {id:uid(),name:'Japan Trip — Tokyo',category:'experiences',target:3800,saved:1540,desc:'14-day itinerary',date:'2025-12-20',created:Date.now()-30*864e5},
+    {id:uid(),name:'Custom Mech Keyboard',category:'tech',target:380,saved:380,desc:'65% layout build',date:null,created:Date.now()-60*864e5},
+    {id:uid(),name:'Emergency Fund 3mo',category:'investment',target:9000,saved:3200,desc:'3-month buffer',date:null,created:Date.now()-90*864e5},
+    {id:uid(),name:'Vinyl Collection',category:'collecting',target:1200,saved:490,desc:'Jazz & ambient pressings',date:null,created:Date.now()-20*864e5},
+  ];
+  save();
+}
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function save(){ localStorage.setItem('vault2-goals', JSON.stringify(goals)); }
+
+/* Clock */
+function tick(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false}); }
+tick(); setInterval(tick,1000);
+
+/* Stats */
+function updateStats(){
+  const active = goals.filter(g=>g.saved<g.target).length;
+  const done   = goals.filter(g=>g.saved>=g.target).length;
+  const saved  = goals.reduce((a,g)=>a+g.saved,0);
+  const tgt    = goals.reduce((a,g)=>a+g.target,0);
+  const pct    = tgt ? Math.round(saved/tgt*100) : 0;
+  document.getElementById('s-active').textContent = active;
+  document.getElementById('s-done').textContent   = done;
+  document.getElementById('s-saved').textContent  = '$'+saved.toLocaleString();
+  document.getElementById('s-targets').textContent= '$'+tgt.toLocaleString();
+  document.getElementById('s-pct-delta').textContent = pct+'% of targets';
+}
+
+/* Chart */
+function initChart(){
+  const ctx = document.getElementById('chart').getContext('2d');
+  Chart.defaults.color = '#2e4a62';
+  Chart.defaults.borderColor = 'rgba(0,245,255,0.06)';
+  Chart.defaults.font.family = "'Share Tech Mono',monospace";
+  Chart.defaults.font.size = 10;
+  if(myChart) myChart.destroy();
+
+  let cfg;
+  if(chartMode==='progress'){
+    const sorted = [...goals].sort((a,b)=>(b.saved/b.target)-(a.saved/a.target));
+    cfg={type:'bar',data:{
+      labels:sorted.map(g=>g.name.length>16?g.name.slice(0,15)+'…':g.name),
+      datasets:[
+        {label:'Saved %',data:sorted.map(g=>+(Math.min(1,g.saved/g.target)*100).toFixed(1)),
+         backgroundColor:sorted.map(g=>CAT_COLOR[g.category]+'bb'),
+         borderColor:sorted.map(g=>CAT_COLOR[g.category]),borderWidth:1,borderSkipped:false},
+        {label:'Remaining',data:sorted.map(g=>+(Math.max(0,1-g.saved/g.target)*100).toFixed(1)),
+         backgroundColor:'rgba(255,255,255,0.03)',borderColor:'rgba(255,255,255,0.07)',borderWidth:1,borderSkipped:false}
+      ]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:600},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#060d14',borderColor:'rgba(0,245,255,0.3)',borderWidth:1,titleColor:'#00f5ff',bodyColor:'#8db0cc',callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.x.toFixed(1)}%`}}},
+        scales:{x:{stacked:true,max:100,grid:{color:'rgba(0,245,255,0.04)'},ticks:{callback:v=>v+'%'}},y:{stacked:true,grid:{display:false}}}}};
+  } else if(chartMode==='breakdown'){
+    const cats={};
+    goals.forEach(g=>{cats[g.category]=(cats[g.category]||0)+g.saved;});
+    const labels=Object.keys(cats);
+    cfg={type:'doughnut',data:{
+      labels:labels.map(l=>l.toUpperCase()),
+      datasets:[{data:labels.map(l=>cats[l]),
+        backgroundColor:labels.map(l=>CAT_COLOR[l]+'99'),
+        borderColor:labels.map(l=>CAT_COLOR[l]),borderWidth:1,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',animation:{duration:700},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#060d14',borderColor:'rgba(0,245,255,0.3)',borderWidth:1,titleColor:'#00f5ff',bodyColor:'#8db0cc',callbacks:{label:c=>` $${c.parsed.toLocaleString()} saved`}}}}};
+  } else {
+    // Timeline - simulated weekly cumulative
+    const W=14;
+    const wkLabels=Array.from({length:W},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(W-1-i)*7);return `W${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;});
+    const datasets=goals.map(g=>{
+      const frac=Math.random()*0.15;
+      const data=Array.from({length:W},(_,i)=>{
+        const t=(i+1)/W;
+        const e=t<0.5?2*t*t:-1+(4-2*t)*t;
+        return Math.round(g.saved*(frac+(1-frac)*e));
+      });
+      return {label:g.name.length>13?g.name.slice(0,12)+'…':g.name,data,
+        borderColor:CAT_COLOR[g.category],backgroundColor:CAT_COLOR[g.category]+'12',
+        borderWidth:1.5,pointBackgroundColor:CAT_COLOR[g.category],pointRadius:2,
+        pointHoverRadius:4,fill:false,tension:0.35};
+    });
+    cfg={type:'line',data:{labels:wkLabels,datasets},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#060d14',borderColor:'rgba(0,245,255,0.3)',borderWidth:1,titleColor:'#00f5ff',bodyColor:'#8db0cc',callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString()}`}}},
+        scales:{x:{grid:{color:'rgba(0,245,255,0.04)'},ticks:{maxTicksLimit:7}},y:{grid:{color:'rgba(0,245,255,0.04)'},ticks:{callback:v=>'$'+v}}}}};
+  }
+
+  myChart = new Chart(ctx, cfg);
+
+  // legend
+  const leg = document.getElementById('legend');
+  if(chartMode==='progress'){
+    leg.innerHTML=`<div class="leg-item"><div class="leg-line" style="background:var(--cyan)"></div>SAVED %</div><div class="leg-item"><div class="leg-line" style="background:rgba(255,255,255,0.1)"></div>REMAINING</div>`;
+  } else if(chartMode==='breakdown'){
+    const cats={};goals.forEach(g=>{cats[g.category]=(cats[g.category]||0)+g.saved;});
+    leg.innerHTML=Object.entries(cats).map(([c,v])=>`<div class="leg-item"><div class="leg-line" style="background:${CAT_COLOR[c]}"></div>${c.toUpperCase()} $${v.toLocaleString()}</div>`).join('');
+  } else {
+    leg.innerHTML=goals.map(g=>`<div class="leg-item"><div class="leg-line" style="background:${CAT_COLOR[g.category]}"></div>${g.name.slice(0,12)}</div>`).join('');
+  }
+}
+
+function setMode(m,btn){
+  chartMode=m;
+  document.querySelectorAll('.chart-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  initChart();
+}
+
+/* Render Goals */
+function renderGoals(){
+  const el=document.getElementById('goals-list');
+  const vis=curFilter==='all'?goals:goals.filter(g=>g.category===curFilter);
+  if(!vis.length){
+    el.innerHTML=`<div class="empty-st"><div class="asc">╔════════════════╗<br>║  NO TARGETS    ║<br>╚════════════════╝</div><p>// INITIALIZE A GOAL TO BEGIN</p></div>`;
+    return;
+  }
+  el.innerHTML=vis.map((g,i)=>{
+    const pct=Math.min(100,Math.round(g.saved/g.target*100));
+    const done=g.saved>=g.target;
+    const col=CAT_COLOR[g.category];
+    const rem=g.target-g.saved;
+    const daysLeft=g.date?Math.max(0,Math.ceil((new Date(g.date)-Date.now())/864e5)):null;
+    return `<div class="goal-card${done?' done':''}" style="animation-delay:${i*0.05}s">
+      <div class="card-accent" style="background:linear-gradient(90deg,${col},${done?'#00f5ff':'#ff00aa'});opacity:${done?0.9:0.4}"></div>
+      <div class="card-inner">
+        <div class="card-top-row">
+          <div>
+            <div class="card-cat" style="color:${col};text-shadow:0 0 8px ${col}55">${g.category.toUpperCase()}</div>
+            <div class="card-name">${g.name}</div>
+            ${g.desc?`<div class="card-desc">${g.desc}</div>`:''}
+          </div>
+          <div class="card-amt">
+            <div class="card-saved" style="color:${col};text-shadow:0 0 12px ${col}44">$${g.saved.toLocaleString()}</div>
+            <div class="card-tgt">of $${g.target.toLocaleString()}</div>
+          </div>
+        </div>
+        <div class="prog-row">
+          <div class="prog-track">
+            <div class="prog-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${done?'#00f5ff':'#ff00aa'});box-shadow:0 0 6px ${col}66;${done?'':''}"></div>
+          </div>
+          <div class="prog-pct" style="color:${col}">${pct}%</div>
+        </div>
+        <div class="card-foot">
+          ${done
+            ?`<button class="btn-dep" style="border-color:rgba(0,255,136,0.4);color:var(--green)" disabled>✓ TARGET MET</button>`
+            :`<button class="btn-dep" style="border-color:${col}55;color:${col}" onclick="openModal('${g.id}')">+ DEPOSIT</button>`
+          }
+          <button class="btn-rm" onclick="delGoal('${g.id}')">✕</button>
+          ${daysLeft!==null?`<div class="card-badge">${daysLeft}d left</div>`:''}
+          ${!done?`<div class="card-badge">$${rem.toLocaleString()} to go</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Add */
+function addGoal(){
+  const name=document.getElementById('f-name').value.trim();
+  const target=parseFloat(document.getElementById('f-target').value);
+  const saved=parseFloat(document.getElementById('f-saved').value)||0;
+  const desc=document.getElementById('f-desc').value.trim();
+  const date=document.getElementById('f-date').value||null;
+  const cat=document.querySelector('#cat-grid .sel')?.dataset.cat||'other';
+  if(!name) return toast('// ERROR: DESIGNATION REQUIRED','err');
+  if(!target||target<=0) return toast('// ERROR: INVALID TARGET VALUE','err');
+  goals.unshift({id:uid(),name,category:cat,target,saved,desc,date,created:Date.now()});
+  save(); render();
+  ['f-name','f-target','f-saved','f-desc','f-date'].forEach(id=>document.getElementById(id).value='');
+  toast('// GOAL INITIALIZED: '+name.toUpperCase(),'ok');
+}
+
+/* Delete */
+function delGoal(id){
+  goals=goals.filter(g=>g.id!==id);
+  save(); render();
+  toast('// GOAL TERMINATED','err');
+}
+
+/* Deposit modal */
+function openModal(id){
+  depositId=id;
+  const g=goals.find(g=>g.id===id);
+  document.getElementById('m-name').textContent='> '+g.name+' — $'+g.saved.toLocaleString()+' / $'+g.target.toLocaleString();
+  document.getElementById('m-amt').value='';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('m-amt').focus(),180);
+}
+
+function closeModal(e){
+  if(!e||e.target.id==='overlay') document.getElementById('overlay').classList.remove('open');
+}
+
+function confirmDeposit(){
+  const amt=parseFloat(document.getElementById('m-amt').value);
+  if(!amt||amt<=0) return toast('// ERROR: INVALID AMOUNT','err');
+  const g=goals.find(g=>g.id===depositId);
+  g.saved=Math.min(g.target,g.saved+amt);
+  save(); render();
+  document.getElementById('overlay').classList.remove('open');
+  const done=g.saved>=g.target;
+  toast(done?'// TARGET REACHED: '+g.name.toUpperCase():`// TX CONFIRMED: +$${amt.toLocaleString()} → ${g.name}`,done?'ok':'');
+}
+
+/* Filter */
+function doFilter(cat,btn){
+  curFilter=cat;
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGoals();
+}
+
+/* Cat selector */
+document.querySelectorAll('#cat-grid .cat-opt').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#cat-grid .cat-opt').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+  });
+});
+
+/* Toast */
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+/* Keys */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('overlay').classList.contains('open')) confirmDeposit();
+  if(e.key==='Escape') closeModal();
+});
+
+function render(){ updateStats(); renderGoals(); initChart(); }
+render();
+</script>
+</body>
+</html>
